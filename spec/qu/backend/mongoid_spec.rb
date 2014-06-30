@@ -3,6 +3,7 @@ require 'qu-mongoid'
 
 describe Qu::Backend::Mongoid do
   it_should_behave_like 'a backend'
+  it_should_behave_like 'a backend interface'
 
   describe 'connection' do
     it 'uses a separate connection in each thread' do
@@ -31,7 +32,7 @@ describe Qu::Backend::Mongoid do
       ::Mongoid.sessions[:qu] = {:uri => 'mongodb://127.0.0.1:27017/quspec', :max_retries_on_connection_failure => 4}
       Qu.backend = subject
       Qu.configure do |c|
-        c.backend.session = :qu
+        c.backend.connection = :qu
       end
       expect(subject.connection).to eq(::Mongoid::Sessions.with_name(:qu))
       
@@ -73,22 +74,22 @@ describe Qu::Backend::Mongoid do
     end
   end
 
-  describe 'reserve' do
+  describe 'pop' do
     let(:worker) { Qu::Worker.new }
 
     describe "on mongo >=2" do
       it 'returns nil when no jobs exist' do
         subject.clear
-        expect_any_instance_of(Moped::Session).to receive(:command).and_return(nil)
-        expect { expect(subject.reserve(worker, :block => false)).to be_nil }.not_to raise_error
+        expect_any_instance_of(Moped::Query).to receive(:modify).and_return(nil)
+        expect { expect(subject.pop(worker)).to be_nil }.not_to raise_error
       end
     end
 
     describe 'on mongo <2' do
       it 'returns nil when no jobs exist' do
         subject.clear
-        expect(subject.connection).to receive(:command).and_raise(Moped::Errors::OperationFailure.new(nil, 'test'))
-        expect { expect(subject.reserve(worker, :block => false)).to be_nil }.not_to raise_error
+        expect_any_instance_of(Moped::Collection).to receive(:find).and_raise(Moped::Errors::OperationFailure.new(nil, 'test'))
+        expect { expect(subject.pop(worker)).to be_nil }.not_to raise_error
       end
     end
   end

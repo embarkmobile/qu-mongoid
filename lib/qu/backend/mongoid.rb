@@ -36,31 +36,23 @@ module Qu
       end
       alias_method :database, :connection
 
-      def connection=(conn)
-        warn %q(If you are using threads, setting the Qu::Mongoid connection will not work. Configure the session instead.
-Example:
-  Qu.configure do |c|
-    c.backend.session = :qu
-  end
-)
-        Thread.current[self.to_s] = conn
-      end
-
-      def clear(queue = nil)
-        queue ||= queues + ['failed']
-        logger.info { "Clearing queues: #{queue.inspect}" }
-        Array(queue).each do |q|
-          logger.debug "Clearing queue #{q}"
-          jobs(q).drop
-          self[:queues].where({:name => q}).remove
+      # Pass in a symbol session identifier, or an actual session
+      # TODO: verify this works when Threading
+      def connection=(connection)
+        if connection.respond_to? :to_sym
+          @session = connection
+          Thread.current[self.to_s] = nil
+          connection
+        else
+          Thread.current[self.to_s] = connection
         end
       end
 
-      def queues
-        self[:queues].find.map {|doc| doc['name'] }
+      def clear(queue = 'default')
+        jobs(queue).drop
       end
 
-      def length(queue = 'default')
+      def size(queue = 'default')
         jobs(queue).find.count
       end
 
@@ -75,81 +67,40 @@ Example:
       end
       private :new_id
 
-      def enqueue(payload)
+      def push(payload)
         payload.id = new_id
-        jobs(payload.queue).insert({:_id => payload.id, :klass => payload.klass.to_s, :args => payload.args})
-        self[:queues].where({:name => payload.queue}).upsert({:name => payload.queue})
-        logger.debug { "Enqueued job #{payload}" }
+        jobs(payload.queue).insert(payload_attributes(payload))
         payload
       end
 
-      def reserve(worker, options = {:block => true})
-        loop do
-          worker.queues.each do |queue|
-            logger.debug { "Reserving job in queue #{queue}" }
+      def pop(queue = 'default')
+        begin
+          doc = jobs(queue).find.modify({}, remove: true)
 
-            begin
-              doc = connection.command(:findAndModify => jobs(queue).name, :remove => true)
-              if doc && doc['value']
-                doc = doc['value']
-                doc['id'] = doc.delete('_id')
-                return Payload.new(doc)
-              end
-            rescue ::Moped::Errors::OperationFailure
-              # No jobs in the queue (MongoDB <2)
-            end
+          if doc
+            doc['id'] = doc.delete('_id')
+            return Payload.new(doc)
           end
-
-          if options[:block]
-            sleep poll_frequency
-          else
-            break
-          end
+        rescue ::Moped::Errors::OperationFailure => e
+          # No jobs in the queue (MongoDB <2)
         end
       end
 
-      def release(payload)
-        jobs(payload.queue).insert({:_id => payload.id, :klass => payload.klass.to_s, :args => payload.args})
-      end
-
-      def failed(payload, error)
-        jobs('failed').insert(:_id => payload.id, :klass => payload.klass.to_s, :args => payload.args, :queue => payload.queue)
-      end
-
-      def completed(payload)
-      end
-
-      def register_worker(worker)
-        logger.debug "Registering worker #{worker.id}"
-        self[:workers].insert(worker.attributes.merge(:id => worker.id))
-      end
-
-      def unregister_worker(worker)
-        logger.debug "Unregistering worker #{worker.id}"
-        self[:workers].where(:id => worker.id).remove
-      end
-
-      def workers
-        self[:workers].find.map do |doc|
-          Qu::Worker.new(doc)
-        end
-      end
-
-      def clear_workers
-        logger.info "Clearing workers"
-        self[:workers].drop
+      def abort(payload)
+        jobs(payload.queue).insert(payload_attributes(payload))
       end
 
     private
 
+      def payload_attributes(payload)
+        attrs = payload.attributes_for_push
+        attrs[:_id] = attrs.delete(:id)
+        attrs
+      end
+
       def jobs(queue)
-        self["queue:#{queue}"]
+        connection["qu:queue:#{queue}"]
       end
-
-      def [](name)
-        database["qu:#{name}"]
-      end
-
     end
   end
 end

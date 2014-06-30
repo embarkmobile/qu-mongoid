@@ -6,3 +6,7 @@ gemspec
 group :test do
   gem 'SystemTimer',  :platform => :mri_18
 end
+
+group :development, :test do
+  gem 'qu', git: 'git@github.com:bkeepers/qu.git'
+end
