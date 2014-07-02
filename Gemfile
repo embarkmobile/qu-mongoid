@@ -11,5 +11,5 @@ group :test do
 end
 
 group :development, :test do
-  gem 'qu', git: 'git@github.com:bkeepers/qu.git'
+  gem 'qu', git: 'https://github.com/bkeepers/qu.git'
 end

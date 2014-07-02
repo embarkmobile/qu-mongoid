@@ -6,7 +6,9 @@ rvm:
   - rbx-2
 services:
   - mongodb
-gemfile:
-  - Gemfile
-  - gemfiles/mongoid3.0.gemfile
-  - gemfiles/mongoid3.1.gemfile
+matrix:
+  include:
+    - rvm: 2.1.2
+      gemfile: gemfiles/mongoid3.0.gemfile
+    - rvm: 2.1.2
+      gemfile: gemfiles/mongoid3.1.gemfile

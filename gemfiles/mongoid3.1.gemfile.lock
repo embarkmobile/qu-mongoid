@@ -1,5 +1,5 @@
 GIT
-  remote: git@github.com:bkeepers/qu.git
+  remote: https://github.com/bkeepers/qu.git
   revision: 50f3788f2b55ddd4dc939767fb35aebefa260322
   specs:
     qu (0.2.0)
