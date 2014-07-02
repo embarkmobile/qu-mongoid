@@ -1,10 +1,10 @@
 source "http://rubygems.org"
 
 # Specify your gem's dependencies in qu-mongoid.gemspec
-gemspec
+gemspec path: '..'
 
-gem 'mongoid', '~> 4.0.0'
-gem 'moped', '~> 2.0'
+gem 'mongoid', '~> 3.1.0'
+gem 'moped', '~> 1.5'
 
 group :test do
   gem 'SystemTimer',  :platform => :mri_18
