@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files`.split("\n")
   s.require_paths = ["lib"]
 
-  s.add_dependency 'mongoid', '>= 3.0'
+  s.add_dependency 'mongoid', '>= 5.0'
   s.add_dependency 'qu'
 
   s.add_development_dependency 'rspec', '~> 2.14'

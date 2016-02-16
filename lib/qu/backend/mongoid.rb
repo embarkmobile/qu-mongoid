@@ -13,34 +13,34 @@ module Qu
       # Seconds to wait before looking for more jobs when the queue is empty (default: 5)
       attr_accessor :poll_frequency
       
-      attr_accessor :session
+      attr_accessor :client_name
 
       def initialize
         self.max_retries     = 5
         self.retry_frequency = 1
         self.poll_frequency  = 5
-        self.session = :default
+        self.client_name = :default
       end
 
       def connection
         Thread.current[self.to_s] ||= begin
-          unless ::Mongoid.sessions[@session]
+          unless ::Mongoid.clients[@client_name]
             if (uri = (ENV['MONGOHQ_URL'] || ENV['MONGOLAB_URI']).to_s) && !uri.empty?
-              ::Mongoid.sessions = {:default => {:uri => uri, :max_retries_on_connection_failure => 4}}
+              ::Mongoid.clients[:default] = {:uri => uri, :max_retries_on_connection_failure => 4}
             else
               ::Mongoid.connect_to('qu')
             end
           end
-          ::Mongoid::Sessions.with_name(@session)
+          ::Mongoid::Clients.with_name(@client_name)
         end
       end
       alias_method :database, :connection
 
-      # Pass in a symbol session identifier, or an actual session
+      # Pass in a symbol session identifier, or an actual client
       # TODO: verify this works when Threading
       def connection=(connection)
         if connection.respond_to? :to_sym
-          @session = connection
+          @client_name = connection
           Thread.current[self.to_s] = nil
           connection
         else
@@ -53,41 +53,30 @@ module Qu
       end
 
       def size(queue = 'default')
-        jobs(queue).find.count
+        jobs(queue).count
       end
-
-      if defined?(::Moped::BSON::ObjectId)
-        def new_id
-          ::Moped::BSON::ObjectId.new
-        end
-      else
-        def new_id
-          ::BSON::ObjectId.new
-        end
-      end
-      private :new_id
 
       def push(payload)
-        payload.id = new_id
-        jobs(payload.queue).insert(payload_attributes(payload))
+        payload.id = ::BSON::ObjectId.new
+        jobs(payload.queue).insert_one(payload_attributes(payload))
         payload
       end
 
       def pop(queue = 'default')
         begin
-          doc = jobs(queue).find.modify({}, remove: true)
+          doc = jobs(queue).find_one_and_delete({})
 
           if doc
             doc['id'] = doc.delete('_id')
             return Payload.new(doc)
           end
-        rescue ::Moped::Errors::OperationFailure => e
+        rescue ::Mongo::Error::OperationFailure => e
           # No jobs in the queue (MongoDB <2)
         end
       end
 
       def abort(payload)
-        jobs(payload.queue).insert(payload_attributes(payload))
+        jobs(payload.queue).insert_one(payload_attributes(payload))
       end
 
     private
