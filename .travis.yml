@@ -1,14 +1,14 @@
 rvm:
   - 1.9.3
   - 2.0.0
-  - 2.1.2
+  - 2.2.4
   - jruby-19mode
   - rbx-2
 services:
   - mongodb
 matrix:
   include:
-    - rvm: 2.1.2
-      gemfile: gemfiles/mongoid3.0.gemfile
-    - rvm: 2.1.2
-      gemfile: gemfiles/mongoid3.1.gemfile
+    - rvm: 2.2.4
+      gemfile: gemfiles/mongoid5.0.gemfile
+    - rvm: 2.2.4
+      gemfile: gemfiles/mongoid5.1.gemfile
