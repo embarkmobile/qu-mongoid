@@ -6,16 +6,6 @@ describe Qu::Backend::Mongoid do
   it_should_behave_like 'a backend interface'
 
   describe 'connection' do
-    it 'uses a separate connection in each thread' do
-      backend = subject
-      connection = subject.connection
-      separate_connection = false
-      Thread.new do
-        separate_connection = (backend.connection != connection)
-      end.join
-      expect(separate_connection).to be true
-    end
-    
     it 'defaults to the qu database' do
       expect(subject.connection).to be_instance_of(Mongo::Client)
       expect(subject.connection.options[:database]).to eq('qu')
