@@ -18,5 +18,5 @@ Gem::Specification.new do |s|
   s.add_dependency 'qu'
 
   s.add_development_dependency 'rspec', '~> 2.14'
-  s.add_development_dependency 'rake'
+  s.add_development_dependency 'rake', '< 11.0' # rspec-core <3.4.4 uses last_comment method which has been removed from Rake 11.0.1
 end

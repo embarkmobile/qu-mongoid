@@ -1,15 +1,9 @@
 rvm:
-  - 2.0.0
-  - 2.2.4
-  - jruby-9.0.1.0
-  - rbx-2
+  - 2.3.4
 services:
   - mongodb
-matrix:
-  include:
-    - rvm: 2.2.4
-      gemfile: gemfiles/mongoid5.0.gemfile
-    - rvm: 2.2.4
-      gemfile: gemfiles/mongoid5.1.gemfile
-  allow_failures:
-    - rvm: jruby-9.0.1.0
+cache: bundler
+gemfile:
+  - gemfiles/mongoid5.0.gemfile
+  - gemfiles/mongoid5.1.gemfile
+  - gemfiles/mongoid6.1.gemfile
